@@ -52,12 +52,18 @@ from rdflib.py3compat import b, PY3
 from rdflib.store import NO_STORE
 from rdflib.store import VALID_STORE
 import logging
-logging.basicConfig(level=logging.ERROR,format="%(message)s")
-_logger = logging.getLogger(__name__)
-_logger.setLevel(logging.ERROR)
+
+# logging configuration should not be done at module level
+#logging.basicConfig(level=logging.ERROR,format="%(message)s")
+#_logger.setLevel(logging.ERROR)
+
 def bb(u): return u.encode('utf-8')
 
 Any = None
+
+def _debug(*args, **kw):
+    logger = logging.getLogger(__name__)
+    logger.debug(*args, **kw)
 
 def ParseConfigurationString(config_string):
     """
@@ -281,8 +287,8 @@ class PostgreSQL(AbstractSQLStore):
         # db.close()
         # sys.stderr.write("Leaving 'destroy'\n")
 
-        _logger.debug("Destroyed Close World Universe %s in PostgreSQL database %s" % \
-                    (self.identifier, configuration))
+        _debug("Destroyed Close World Universe %s in PostgreSQL database %s",
+               self.identifier, configuration)
 
     def EscapeQuotes(self, qstr):
         """
@@ -757,11 +763,10 @@ class PostgreSQL(AbstractSQLStore):
         elif paramList:
             raise Exception("Not supported!")
         else:
-
             params = tuple([prepitem(item) for item in params])
             querystr = unicode(qStr).replace('"',"'")
-            qs = querystr%params
-            print(qs)
+            qs = querystr % params
+            _debug(qs)
             cursor.execute(qs)
 
     def buildGenericClause(self, generic, value, tableName):
