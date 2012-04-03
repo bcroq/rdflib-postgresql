@@ -28,8 +28,13 @@
 ## (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ## OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import psycopg2
+import itertools
+import logging
+import random
+import string
 import sys
+
+import psycopg2
 from rdflib import Literal
 from rdflib.graph import Graph
 from rdflib.graph import QuotedGraph
@@ -51,7 +56,6 @@ from rdfextras.store.AbstractSQLStore import extractTriple
 from rdflib.py3compat import b, PY3
 from rdflib.store import NO_STORE
 from rdflib.store import VALID_STORE
-import logging
 
 # logging configuration should not be done at module level
 #logging.basicConfig(level=logging.ERROR,format="%(message)s")
@@ -292,12 +296,11 @@ class PostgreSQL(AbstractSQLStore):
 
     def EscapeQuotes(self, qstr):
         """
-        Overridden because PostgreSQL is in its own quoting world
+        Overridden because executeSQL uses PostgreSQL's dollar-quoted strings
         """
         if qstr is None:
             return ''
-        tmp = qstr.replace("'", "''")
-        return tmp
+        return qstr
 
     # copied and pasted primarily to use the local unionSELECT instead
     # of the one provided by AbstractSQLStore
@@ -754,10 +757,12 @@ class PostgreSQL(AbstractSQLStore):
             if isinstance(item, int) or item == 'NULL':
                 return item
             else:
+                tag = [random.choice(string.lowercase) for dummy in itertools.repeat(None, 5)]
+                tag = '$%s$' % ''.join(tag)
                 try:
-                    return u"$$%s$$" % item.decode('utf-8')
+                    return u"%s%s%s" % (tag, item.decode('utf-8'), tag)
                 except:
-                    return u"$$%s$$" % item
+                    return u"%s%s%s" % (tag, item, tag)
         if not params:
             cursor.execute(unicode(qStr))
         elif paramList:
